@@ -1,0 +1,57 @@
+移动端事件和PC端事件存在很大的区别
+  + PC端是 鼠标 + 物理键盘 的触发
+  + 移动端是 手指 + 虚拟键盘 的触发
+@1 mousexxx这种事件在移动端几乎都不支持
+@2 keyxxx这种事件在移动端也几乎都不支持「我们基于input事件代替」
+   userNameInp.oninput=function(){
+      //监听文本框内容输入
+   };
+@3 PC端click事件是“点击”；但是移动端的click事件是“单击”{没一次点击后，会等待300ms，如果这期间没有触发第二次点击，才会认为是单击，也就是触发click事件 ->移动端的click事件存在300ms的延迟}；
+------
+移动端我们基本上都是基于 touch/gesture 事件模型处理相关操作的！
+  touch单手指事件模型
+    + touchstart 手指按下
+    + touchmove 手指移动
+    + touchend 手指离开
+    + touchcancel 手指操作取消「因为非正常原因取消」
+  gesture多手指事件模型
+    + gesturestart
+    + gesturechange
+    + gestureend
+    + gesturecancel
+-----
+需求：在移动端实现出类似于pc端click这样的“点击”操作效果「或者说解决移动端click的300ms延迟问题」！
+
+
+=======================
+所有的设计模式都是“锦上添花”；没有设计模式也可以实现需求，只不过基于设计模式可以更高效的管理代码！！
+发布订阅设计模式：
+  @1 制定一个计划表「创建一个容器」
+  @2 在没有通知计划执行之前，我们把后续要做的事情，逐一添加到计划表中！「添加到容器中」
+  @3 在指定阶段，通知计划表中的方法逐一执行即可！！
+  @4 也有人说，发布订阅就是模拟DOM2的事件池机制{只能处理浏览器标准事件}，实现自定义事件的管理！！
+
+DOM0级事件绑定 VS DOM2级事件绑定
+  DOM0：
+    元素.onxxx=function(){}
+    给当前元素的某个“事件私有属性”赋值！！浏览器监听事件的触发，在事件触发后，把绑定的方法执行！！
+  DOM2：
+    新增了一个内置类 EventTarget，所有DOM元素都会基于__proto__找到EventTarget.prototype！！
+    在其原型对象上，提供了几个方法：
+      + addEventListener
+      + removeEventListener
+      + dispatchEvent
+      + ...
+    DOM2中构建了事件池机制，基于addEventListener向事件池中注入事件和方法、基于removeEventListener是移除事件和方法！！
+      元素   事件        方法   阶段
+      #box  click       fn1   冒泡
+      #box  mouseover   fn1   冒泡
+      #box  click       fn2   冒泡
+      ....
+    当我们触发某个事件的时候，会去事件池中进行查找，把匹配的方法逐一拿出来执行！！
+  DOM0和DOM2的区别：
+    + DOM0只能给当前元素的某个事件行为绑定一个方法，绑定第二个会覆盖之前的；DOM2可以给当前元素的某个事件行为，绑定多个不同的方法！！
+    + DOM0绑定，只有元素拥有相关的事件私有属性才可以绑定（例如：onxxx）！DOM2则不需要，只要是浏览器标准的事件行为，都可以做事件绑定！例如：DOMContentLoaded 在DOM TREE构建完即触发，这个事件是不支持DOM0绑定的，也就是没有onDOMContentLoaded这个属性！！只能用DOM2绑定！！
+    + DOM0从性能角度讲，比DOM2强上那么一丢丢丢丢丢丢丢丢丢丢丢....
+    + DOM0绑定和移除绑定都很方便「移除绑定就是给属性赋值为null即可」；但是DOM2需要基于removeEventListener特定的方法，从事件池中，移除指定类型、指定阶段的指定方法「需要和绑定阶段对应」！！
+  平时项目中建议采用DOM2事件绑定，可以有效避免多人协作开发中，事件绑定的冲突问题！！
